@@ -1,1 +1,1 @@
-# django-crud-pix
+# django-pix-api
