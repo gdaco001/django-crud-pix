@@ -8,11 +8,20 @@ packages = [{include = "django_pix_api"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-django = "^4.1.6"
+django = "^3.2.17"
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
+pytest = "^7.2.1"
+pytest-cov = "^4.0.0"
+pytest-deadfixtures = "^2.2.1"
+pytest-django = "^4.5.2"
+pre-commit = "^3.0.4"
+factory-boy = "^3.2.1"
+faker = "^16.7.0"
+pytest-envvars = "^1.2.1"
+pytest-randomly = "^3.12.0"
 
 [build-system]
 requires = ["poetry-core"]
