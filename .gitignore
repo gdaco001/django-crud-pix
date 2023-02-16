@@ -136,3 +136,4 @@ frontend/
 *.mo
 
 settings.json
+launch.json
