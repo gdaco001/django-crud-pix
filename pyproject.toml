@@ -4,12 +4,22 @@ version = "0.1.0"
 description = ""
 authors = ["Gabriel da Costa"]
 readme = "README.md"
-packages = [{include = "django_pix_api"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 django = "^3.2.17"
 prettyconf = "^2.2.1"
+djangorestframework = "^3.14.0"
+easy-choices = "^1.0.0"
+django-extensions = "^3.2.1"
+drf-yasg = "^1.21.5"
+drf-extensions = "^0.7.1"
+django-filter = "^22.1"
+gunicorn = "^20.1.0"
+psycopg2 = "^2.9.5"
+django-createsuperuserwithpassword = "^2.0.0"
+factory-boy = "^3.2.1"
+dj-database-url = "^1.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -19,14 +29,29 @@ pytest-cov = "^4.0.0"
 pytest-deadfixtures = "^2.2.1"
 pytest-django = "^4.5.2"
 pre-commit = "^3.0.4"
-factory-boy = "^3.2.1"
 faker = "^16.7.0"
 pytest-envvars = "^1.2.1"
 pytest-randomly = "^3.12.0"
+pygraphviz = "^1.10"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["pix_api/tests"]
+pythonpath = ["pix_api"]
+DJANGO_SETTINGS_MODULE = "pix_api.settings"
+addopts = "-vv --reuse-db --tb=native --cov=apps"
+pytestenvvars__env_files = [".env"]
+pytestenvvars__dont_randomize_envvars = [
+    "DATABASE_URL",
+]
+
+[tool.coverage.report]
+exclude_lines = ["nocover"]
+show_missing = true
+omit = ["*/migrations/*"]
 
 [tool.skjold]
 sources = ["pypa"]
