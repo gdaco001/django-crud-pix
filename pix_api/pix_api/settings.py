@@ -19,8 +19,7 @@ DEBUG = False if os.getenv("DOCKER_CONTAINER") else True
 # DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
-ALLOWED_HOSTS = []
-
+PAGE_SIZE = config("PAGE_SIZE", default="10", cast=int)
 
 # Application definition
 
@@ -49,6 +48,17 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+REST_FRAMEWORK = {
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": PAGE_SIZE,
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
+}
 ROOT_URLCONF = "pix_api.urls"
 WSGI_APPLICATION = "pix_api.wsgi.application"
 
@@ -70,9 +80,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "pix_api.wsgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+SWAGGER_SETTINGS = {
+    "VALIDATOR_URL": "http://localhost:8189",
+}
 
 DATABASES = {
     "default": {
