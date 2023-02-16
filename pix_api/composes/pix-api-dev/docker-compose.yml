@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: ng01
+    ports:
+      - "1337:80"
+    volumes:
+      - ./../../../pix_api:/usr/src/app/
+      - ./../../../config/nginx:/etc/nginx/conf.d
+      - static_volume:/usr/src/app/frontend/static
+    depends_on:
+      - api
+
+  api:
+    build: .
+    image: pix_api:1.0
+    container_name: pix-api
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && python manage.py createsuperuserwithpassword --username admin --password admin --email user.test@user.com --preserve && python manage.py loaddata data.json && gunicorn -c gunicorn_config.py pix_api.wsgi:application"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - db
+    volumes:
+      - ./../../../pix_api/:/usr/src/app/
+      - static_volume:/usr/src/app/frontend/static
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  db:
+    image: postgres:13
+    container_name: postgresql_db
+    ports:
+    - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+
+volumes:
+  postgres_data:
+  static_volume:

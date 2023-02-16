@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 
+from dj_database_url import parse as parse_db_url
 from prettyconf import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -13,7 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False if os.getenv("DOCKER_CONTAINER") else True
+# DEBUG = True
+ALLOWED_HOSTS = ["*"]
 
 ALLOWED_HOSTS = []
 
@@ -27,6 +31,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_createsuperuserwithpassword",
+    "drf_yasg",
+    "rest_framework",
+    "django_extensions",
+    "django_filters",
+    "apps.core",
 ]
 
 MIDDLEWARE = [
@@ -40,6 +50,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "pix_api.urls"
+WSGI_APPLICATION = "pix_api.wsgi.application"
 
 TEMPLATES = [
     {
@@ -65,11 +76,15 @@ WSGI_APPLICATION = "pix_api.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+        **parse_db_url(
+            config("DATABASE_URL"),
+            conn_max_age=config("CONN_MAX_AGE", cast=config.eval, default="None"),
+        ),
+        "TEST": {
+            "NAME": config("TEST_DATABASE_NAME", default=None),
+        },
+    },
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -106,8 +121,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-
+LOCALE_PATHS = (BASE_DIR / "locale",)
+MEDIA_URL = "/media/"
 STATIC_URL = "/static/"
+FRONTEND_DIR = BASE_DIR / "frontend"
+STATIC_ROOT = FRONTEND_DIR / "static"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
