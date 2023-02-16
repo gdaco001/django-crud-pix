@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# static files
+staticfiles/
+frontend/
+
+# Translations
+*.mo
+
+settings.json
