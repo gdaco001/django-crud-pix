@@ -152,6 +152,7 @@ class ReceiverCreateUpdateSerializer(
             else document_type_choices.cnpj
         )
         validated_data["status"] = receiver_status_choices.rascunho
+        validated_data["email"] = validated_data.get("email", None)
         try:
             receiver = ReceiverFactory.create(**validated_data)
         except Exception:
