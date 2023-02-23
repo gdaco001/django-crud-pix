@@ -9,7 +9,7 @@ from apps.core.choices import (
 from utils.re_patterns import PATTERN_MAP, mask_document
 from rest_framework_extensions.serializers import PartialUpdateSerializerMixin
 from apps.core.factories import ReceiverFactory
-from utils.exceptions import ReceiverApiException
+from utils.exceptions import ReceiverAlreadyExistsApiException
 
 
 class BankSerializer(serializers.ModelSerializer):
@@ -136,8 +136,10 @@ class ReceiverCreateUpdateSerializer(
         validated_data["status"] = receiver_status_choices.rascunho
         try:
             receiver = ReceiverFactory.create(**validated_data)
-        except Exception as e:
-            raise ReceiverApiException(detail=str(e))
+        except Exception:
+            raise ReceiverAlreadyExistsApiException(
+                detail=f"A combinação de documento ({validated_data['document']}), chave pix ({validated_data['pix_key']}) e tipo de chave ({validated_data['pix_key_type']}) já existe."
+            )
 
         return receiver
 
