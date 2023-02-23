@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytest
 from apps.core.choices import pix_key_type_choices, receiver_status_choices
 from apps.core.factories import ReceiverFactory
+from utils.re_patterns import mask_document, convert_to_numerals
 from django.conf import settings
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -148,8 +149,8 @@ class TestReceiverViewSet:
             (pix_key_type_choices.cnpj, "12345678901234"),
             (pix_key_type_choices.email, "TeStE@teste.com"),
             (pix_key_type_choices.email, "teste@teste.com"),
-            (pix_key_type_choices.telefone, "559298765-4321"),
-            (pix_key_type_choices.telefone, "5592987654321"),
+            (pix_key_type_choices.telefone, "+5592987654321"),
+            (pix_key_type_choices.telefone, "92987654321"),
             (pix_key_type_choices.chave, "959b69c0-dc57-4a05-b4e4-22c4ea0f97f0"),
         ],
     )
@@ -172,9 +173,9 @@ class TestReceiverViewSet:
         if pix_key_type in [
             pix_key_type_choices.cpf,
             pix_key_type_choices.cnpj,
-            pix_key_type_choices.telefone,
         ]:
-            pix_key_value = re.sub("[^0-9]", "", pix_key_value)
+            pix_key_value = convert_to_numerals(pix_key_value)
+            pix_key_value = mask_document(pix_key_value)
             expected_attributes_response["pix_key"] = pix_key_value
 
         elif pix_key_type == pix_key_type_choices.email:
@@ -213,6 +214,27 @@ class TestReceiverViewSet:
         response = api_client.post(url, data=receiver_attributes)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    @pytest.mark.parametrize(
+        "document",
+        [
+            ("12f.456.789-01"),
+            ("1sd78901"),
+            ("12.345.67-/901234"),
+            ("123fs78901234"),
+        ],
+    )
+    def test_create_with_invalid_document_values(
+        self,
+        api_client,
+        receiver_attributes,
+        document,
+        create_default_bank_account,
+    ):
+        url = reverse("core:receivers-list")
+        receiver_attributes["document"] = document
+        response = api_client.post(url, data=receiver_attributes)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
     def test_create_with_empty_email(
         self, api_client, receiver_attributes, create_default_bank_account
     ):
@@ -243,7 +265,50 @@ class TestReceiverViewSet:
         receiver_attributes["pix_key"] = receiver.pix_key
 
         response = api_client.post(url, receiver_attributes)
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.status_code == status.HTTP_409_CONFLICT
+
+    @pytest.mark.parametrize(
+        "pix_key_type, pix_key_value",
+        [
+            ("CPF", "123.456.789-01"),
+            ("CPJN", "12.345.678/9012-34"),
+            ("EMAIRU", "teste@teste.com"),
+            ("PHONE", "559298765-4321"),
+            ("KEY", "959b69c0dc57-4a05b4e4-22c4ea0f97f0"),
+        ],
+    )
+    def test_create_with_invalid_pix_key_type(
+        self,
+        api_client,
+        pix_key_type,
+        pix_key_value,
+        receiver_attributes,
+        create_default_bank_account,
+    ):
+        url = reverse("core:receivers-list")
+        receiver_attributes["pix_key_type"] = pix_key_type
+        receiver_attributes["pix_key_value"] = pix_key_value
+        response = api_client.post(url, receiver_attributes)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize(
+        "attribute", ["name", "document", "pix_key_type", "pix_key"]
+    )
+    def test_create_with_missing_required_payload_attributes(
+        self, api_client, receiver_attributes, attribute, create_default_bank_account
+    ):
+        url = reverse("core:receivers-list")
+        receiver_attributes.pop(attribute)
+        response = api_client.post(url, receiver_attributes)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_with_missing_non_required_payload_attributes(
+        self, api_client, receiver_attributes, create_default_bank_account
+    ):
+        url = reverse("core:receivers-list")
+        receiver_attributes.pop("email")
+        response = api_client.post(url, receiver_attributes)
+        assert response.status_code == status.HTTP_201_CREATED
 
     @pytest.mark.parametrize(
         "receiver_status",

@@ -1,5 +1,6 @@
 # Regex patterns for validation
 import re
+from apps.core.choices import pix_key_type_choices
 
 PATTERN_MAP = {
     "CPF": r"^[0-9]{3}[\.]?[0-9]{3}[\.]?[0-9]{3}[-]?[0-9]{2}$",
@@ -28,3 +29,30 @@ def mask_document(document: str) -> str:
     if re.match(PATTERN_MAP["CPF"], document):
         return f"{document[:3]}.{document[3:6]}.{document[6:9]}-{document[9:]}"
     return f"{document[:2]}.{document[2:5]}.{document[5:8]}/{document[8:12]}-{document[12:]}"
+
+
+def convert_to_numerals(string: str) -> str:
+    return re.sub("[^0-9]", "", string)
+
+
+def unmask_pix_key(pix_key: str, pix_key_type) -> str:
+    if pix_key_type not in [
+        pix_key_type_choices.chave,
+        pix_key_type_choices.email,
+    ]:
+        return convert_to_numerals(pix_key)
+
+    elif pix_key_type == pix_key_type_choices.email:
+        return pix_key.upper()
+    else:
+        return pix_key
+
+
+def mask_pix_key(pix_key: str, pix_key_type) -> str:
+    if pix_key_type in [
+        pix_key_type_choices.cpf,
+        pix_key_type_choices.cnpj,
+    ]:
+        return mask_document(pix_key)
+    else:
+        return pix_key
