@@ -6,7 +6,13 @@ from apps.core.choices import (
     document_type_choices,
     pix_key_type_choices,
 )
-from utils.re_patterns import PATTERN_MAP, mask_document
+from utils.re_patterns import (
+    PATTERN_MAP,
+    mask_document,
+    mask_pix_key,
+    unmask_pix_key,
+    convert_to_numerals,
+)
 from rest_framework_extensions.serializers import PartialUpdateSerializerMixin
 from apps.core.factories import ReceiverFactory
 from utils.exceptions import ReceiverAlreadyExistsApiException
@@ -43,7 +49,7 @@ class ReceiverSerializer(serializers.ModelSerializer):
             "document_type": data.document_type,
             "document": mask_document(data.document),
             "pix_key_type": data.pix_key_type,
-            "pix_key": data.pix_key,
+            "pix_key": mask_pix_key(data.pix_key, data.pix_key_type),
             "email": data.email,
             "status": data.status,
             "bank_account": BankAccountSerializer(data.bank_account).data,
@@ -60,13 +66,20 @@ class ReceiverSerializer(serializers.ModelSerializer):
 class ReceiverCreateUpdateSerializer(
     PartialUpdateSerializerMixin, serializers.Serializer
 ):
-    name = serializers.CharField(max_length=200, required=True, allow_null=False)
-    document = serializers.CharField(max_length=18, required=True, allow_null=False)
-    pix_key = serializers.CharField(max_length=140, required=True, allow_null=False)
+    name = serializers.CharField(
+        max_length=200, required=True, allow_null=False, allow_blank=False
+    )
+    document = serializers.CharField(
+        max_length=18, required=True, allow_null=False, allow_blank=False
+    )
+    pix_key = serializers.CharField(
+        max_length=140, required=True, allow_null=False, allow_blank=False
+    )
     pix_key_type = serializers.ChoiceField(
         choices=pix_key_type_choices.to_django_choices(),
         required=True,
         allow_null=False,
+        allow_blank=False,
     )
     email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     status = serializers.ChoiceField(
@@ -86,6 +99,13 @@ class ReceiverCreateUpdateSerializer(
 
         return data
 
+    def validate_document(self, value):
+        if re.match(PATTERN_MAP["CPF"], value) is not None:
+            return value
+        elif re.match(PATTERN_MAP["CNPJ"], value) is not None:
+            return value
+        raise serializers.ValidationError("Document is invalid")
+
     def validate_email(self, value):
         if value and re.match(PATTERN_MAP["EMAIL"], value) is not None:
             return value
@@ -94,17 +114,11 @@ class ReceiverCreateUpdateSerializer(
         raise serializers.ValidationError("Notification e-mail is invalid")
 
     def to_internal_value(self, data):
-        data["document"] = re.sub("[^0-9]", "", data["document"])
-        data["email"] = data["email"].upper()
-        if data["pix_key_type"] not in [
-            pix_key_type_choices.chave,
-            pix_key_type_choices.email,
-        ]:
-            data["pix_key"] = re.sub("[^0-9]", "", data["pix_key"])
-
-        if data["pix_key_type"] == pix_key_type_choices.email:
-            data["pix_key"] = data["pix_key"].upper()
-
+        if data.get("email"):
+            data["email"] = data["email"].upper()
+        if data.get("pix_key_type") == pix_key_type_choices.email:
+            if data.get("pix_key"):
+                data["pix_key"] = data["pix_key"].upper()
         return super().to_internal_value(data)
 
     def to_representation(self, data):
@@ -114,7 +128,7 @@ class ReceiverCreateUpdateSerializer(
             "document_type": data.document_type,
             "document": mask_document(data.document),
             "pix_key_type": data.pix_key_type,
-            "pix_key": data.pix_key,
+            "pix_key": mask_pix_key(data.pix_key, data.pix_key_type),
             "email": data.email,
             "status": data.status,
             "bank_account": BankAccountSerializer(data.bank_account).data,
@@ -125,6 +139,10 @@ class ReceiverCreateUpdateSerializer(
         return response
 
     def create(self, validated_data):
+        validated_data["pix_key"] = unmask_pix_key(
+            validated_data["pix_key"], validated_data["pix_key_type"]
+        )
+        validated_data["document"] = convert_to_numerals(validated_data["document"])
         validated_data["bank_account"] = BankAccount.objects.get(
             agency="0000", account="0000000"
         )
@@ -147,6 +165,10 @@ class ReceiverCreateUpdateSerializer(
         if instance.status == receiver_status_choices.validado:
             self.partial = True
             self._update_fields = ["email"]
+        validated_data["pix_key"] = unmask_pix_key(
+            validated_data["pix_key"], validated_data["pix_key_type"]
+        )
+        validated_data["document"] = convert_to_numerals(validated_data["document"])
         return super().update(instance, validated_data)
 
     class Meta:
