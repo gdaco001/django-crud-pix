@@ -2,9 +2,15 @@ from rest_framework_extensions import routers
 from apps.core.views import ReceiverViewSet, DeleteReceiversView
 from django.urls import path
 
-app_name = "core"
-router = routers.ExtendedSimpleRouter()
 
+class OptionalSlashRouter(routers.ExtendedSimpleRouter):
+    def __init__(self):
+        super().__init__()
+        self.trailing_slash = "/?"
+
+
+app_name = "core"
+router = OptionalSlashRouter()
 
 router.register(r"receivers", ReceiverViewSet, basename="receivers")
 
