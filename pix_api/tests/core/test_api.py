@@ -177,7 +177,8 @@ class TestReceiverViewSet:
             pix_key_value = convert_to_numerals(pix_key_value)
             pix_key_value = mask_document(pix_key_value)
             expected_attributes_response["pix_key"] = pix_key_value
-
+        elif pix_key_type == pix_key_type_choices.telefone:
+            expected_attributes_response["pix_key"] = convert_to_numerals(pix_key_value)
         elif pix_key_type == pix_key_type_choices.email:
             expected_attributes_response["pix_key"] = pix_key_value.upper()
 
